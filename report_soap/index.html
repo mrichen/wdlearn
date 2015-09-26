@@ -14,8 +14,8 @@
   </head>
     <body>
     <h3>Why use SOAP for RaaS?</h3>
-    <p>You may find yourself looping through a data set (such as an input file) amd performing some kind of input logic that requires data from a Workday custom report. Generally, RaaS calls are expensive operations, and running a report for each individual worker/cost center/period/whatever can quickly become a pain point as your input set grows.
-    You're nearly always better off running a report once and retrieving all the data you'll need (if memory permits.) In the past year alone:
+    <p>You may find yourself looping through a data set (such as an input file) amd performing some kind of input logic that requires data from a Workday custom report which accepts a particular object instance as a parameter. Generally, RaaS calls are expensive operations, and running a report for each individual worker/cost center/period/whatever can quickly become a pain point as your input set grows.
+    You're nearly always better off running a report once while passing every instance you'll need in a single call, and retrieving all the relevant data up front (if memory permits.) In the past year alone:
 	<ul>
        <li>One client saw run times on an inbound earnings integration decrease from over an hour to around 7 minutes by converting an existing looped single instance REST report call to a single multi-instance SOAP call.</li>
 	   <li>We saw another client's check print integration go from exceeding the two hour timeout to completing in under 30 minutes after converting to a single SOAP report call.</li>
