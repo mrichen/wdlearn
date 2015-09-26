@@ -37,16 +37,16 @@ https://wd-url/ccx/service/customreport2/tenant/owner/Report_Name?Worker!WID=418
 	<p>Start by creating a report and publishing it as a web service, as you would with an EIB or REST-based RaaS report. Off the reports related action, export and save the WSDL locally.<br/>
 	<img src="./img/wsdl_link.PNG"/><br/>
 	Open your studio project, and from the context menu on the project root folder, select 'Import->Import...' select  on the following prompt, select 'File System' and click 'Next'.<br/>
-	<img src="img/import_1.png"/><br/>
+	<img src="img/import_1.PNG"/><br/>
 	Navigate to wherever you saved the WSDL earlier and select the file. Select your project root folder (or a subfolder if you wish) as the destination, and click 'Finish' to bring the WSDL into your project.<br/> On the Schema Explorer to the right, click the leftmost 'Add WSDL or XSD' button, navigate to your newly imported WSDL, and click 'OK'.<br/>
-	<img src="img/select_wsdl.png"/><br/>
+	<img src="img/select_wsdl.PNG"/><br/>
 	You should now see a representation of your report in the 'Schema Explorer' pane. Expand it and you'll see ports for SOAP and REST access to your report. Expand the SOAP port and you'll see the 'Execute_Report' operation; From here, you can right click and 'Open SOAP wrapped request in Web Service Tester' as you would with a delivered Workday Web Service, and construct a request via XSL or a 'write' step.<br/>
-	<img src="img/studio-request.png"/><br/>
+	<img src="img/studio-request.PNG"/><br/>
 	The request portion of your studio will look something like the above. It's not all that different than calling a Workday Web Service, though there are a few things to keep in mind:<br/>
 	Create a report reference on your Workday-in, and point it to your report. Instead of a Workday-out-SOAP you'll use a standard http-out component and pass a reference in the 'Endpoint' property:<br/>
-	<img src="img/http-props.png"/><br/>
+	<img src="img/http-props.PNG"/><br/>
 	Add a WSSE Header to your request, using the <b>$wss.usernametoken.username</b> and <b>$wss.usernametoken.password</b> variables, so that your report is called with the credentials under which the studio is run. Make sure your integration user has the security needed for the report.<br/>
-	<img src="img/wsse-header.png"><br/>
+	<img src="img/wsse-header.PNG"><br/>
 	In your response chain, a validate step with an expression similar to the following can be used to trap SOAP Faults:
 	<code>
 	parts[0].xpath('SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault', 'SOAP-ENV http://schemas.xmlsoap.org/soap/envelope/') == ''
@@ -55,7 +55,7 @@ https://wd-url/ccx/service/customreport2/tenant/owner/Report_Name?Worker!WID=418
 	<h3>Structuring data for performance</h3>
 	At this point, you'll have a large block of XML which you can store in a variable, and extract individual elements as needed with xpath. However, xpath lookups are themselves kind of expensive (though much less so than a new report call each time.) For large datasets, it's probably worth it to convert your giant XML result set into a hashtable, as hash lookups are relatively quick.<br/>
 	The process for this will look something like the sequence below:<br/>
-	<img src="img/split-sequence.png"><br/>
+	<img src="img/split-sequence.PNG"><br/>
 	In your first Eval step, prepare a hashmap to store the report results, as below:
 	<code>
 	props['report.hash.map'] = new java.util.HashMap()
