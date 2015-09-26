@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Workday Reports as SOAP Services in WD Studio</title>
+
+    <link rel="stylesheet" href="../stylesheets/styles.css">
+    <link rel="stylesheet" href="../stylesheets/github-light.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+    <body>
+    <h3>Why use SOAP for RaaS?</h3>
+    <p>You may find yourself looping through a data set (such as an input file) amd performing some kind of input logic that requires data from a Workday custom report. Generally, RaaS calls are expensive operations, and running a report for each individual worker/cost center/period/whatever can quickly become a pain point as your input set grows.
+    You're nearly always better off running a report once and retrieving all the data you'll need (if memory permits.) In the past year alone:
+	<ul>
+       <li>One client saw run times on an inbound earnings integration decrease from over an hour to around 7 minutes by converting an existing looped single instance REST report call to a single multi-instance SOAP call.</li>
+	   <li>We saw another client's check print integration go from exceeding the two hour timeout to completing in under 30 minutes after converting to a single SOAP report call.</li>
+	</ul>
+	I should mention that it is technically possible to pass multiple instances inside a URL if you wanted to stick with the REST approach. For example, a multi instance worker report could be called with as below:<br/>
+	<code>
+https://wd-url/ccx/service/customreport2/tenant/owner/Report_Name?Worker!WID=418b91b6b064104b21a9ee0d6c2498ab!6854645811284e8182713524d52a30ce
+	</code>
+	and with a list of Worker WIDs you could construct a URL in an eval step with something like this:
+	<code>
+	   props['Worker_WIDs'] = lp.getReferenceDataList('Workers', 'WID')<br/>
+	   props['report_url'] = intsys.reportService.getExtrapath('WorkerReport') + '?Worker!WID='<br/>
+	   props['count'] = props['Worker_WIDs'].size() - 1<br/>
+	   foreach(i: count) { props['report_url'] = props['report_url'] + '!' + props['Worker_WIDs'].get(i) }<br/>
+	</code>
+	but it's likely that you're going to run into URL length limitations. Most browsers limit URLS to around 2083 characters and while I haven't found anything published, I imagine Workday Studio's limit is around there as well; With 32 characters for each WID you're most likely going to hit that limit pretty quickly.
+	Fortunately, Workday RaaS also publishes reports as SOAP web services, in which request parameters can be sent in the message body. Message length is less of a concern (I know of one integration that sends a few thousand workers in a single report call) and it's easy to construct the request in an XSL or write step rather than a chain of eval statements.</p>
+	<h3>How it's done</h3>
+	<p>Start by creating a report and publishing it as a web service, as you would with an EIB or REST-based RaaS report. Off the reports related action, export and save the WSDL locally.<br/>
+	<img src="img/wsdl_link.png"/><br/>
+	Open your studio project, and from the context menu on the project root folder, select 'Import->Import...' select  on the following prompt, select 'File System' and click 'Next'.<br/>
+	<img src="img/import_1.png"/><br/>
+	Navigate to wherever you saved the WSDL earlier and select the file. Select your project root folder (or a subfolder if you wish) as the destination, and click 'Finish' to bring the WSDL into your project.<br/> On the Schema Explorer to the right, click the leftmost 'Add WSDL or XSD' button, navigate to your newly imported WSDL, and click 'OK'.<br/>
+	<img src="img/select_wsdl.png"/><br/>
+	You should now see a representation of your report in the 'Schema Explorer' pane. Expand it and you'll see ports for SOAP and REST access to your report. Expand the SOAP port and you'll see the 'Execute_Report' operation; From here, you can right click and 'Open SOAP wrapped request in Web Service Tester' as you would with a delivered Workday Web Service, and construct a request via XSL or a 'write' step.<br/>
+	<img src="img/studio-request.png"/><br/>
+	The request portion of your studio will look something like the above. It's not all that different than calling a Workday Web Service, though there are a few things to keep in mind:<br/>
+	Create a report reference on your Workday-in, and point it to your report. Instead of a Workday-out-SOAP you'll use a standard http-out component and pass a reference in the 'Endpoint' property:<br/>
+	<img src="img/http-props.png"/><br/>
+	Add a WSSE Header to your request, using the <b>$wss.usernametoken.username</b> and <b>$wss.usernametoken.password</b> variables, so that your report is called with the credentials under which the studio is run. Make sure your integration user has the security needed for the report.<br/>
+	<img src="img/wsse-header.png"><br/>
+	In your response chain, a validate step with an expression similar to the following can be used to trap SOAP Faults:
+	<code>
+	parts[0].xpath('SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault', 'SOAP-ENV http://schemas.xmlsoap.org/soap/envelope/') == ''
+	</code>
+	Similarly, a copy step with an input of 'soapbody' and an output of 'message' can be used to strip the SOAP envelope if you're particular about that sort of thing.<br/>
+	<h3>Structuring data for performance</h3>
+	At this point, you'll have a large block of XML which you can store in a variable, and extract individual elements as needed with xpath. However, xpath lookups are themselves kind of expensive (though much less so than a new report call each time.) For large datasets, it's probably worth it to convert your giant XML result set into a hashtable, as hash lookups are relatively quick.<br/>
+	The process for this will look something like the sequence below:<br/>
+	<img src="img/split-sequence.png"><br/>
+	In your first Eval step, prepare a hashmap to store the report results, as below:
+	<code>
+	props['report.hash.map'] = new java.util.HashMap()
+	</code>
+	Split your report output into individual records, and read each key and value into the table you created with something similar to the following:
+	<code>
+	props['report.hash.key.value'] = parts[0].xpath('/rp:Report_Entry/rp:Employee/rp:Employee_ID')<br/>
+	props['report.hash.map'].put(props['report.hash.key.value'], parts[0].text)<br/>
+	</code>
+	You should now be able to access the report data you need with a simple map lookup, which will run somewhat faster than an xpath statement, which itself will run an order of magnitude faster than a report call.<br/>
+	
+	That's about all there is to it. A sample studio file is available <a href="WD_Soap_Demo.zip">here</a>.<br/>
+	
+	Hope this helps.</p><br/>
+	<p align="right"><i>2015 @matthewrichen <a href="http://mrichen.github.io/wdlearn/">mrichen.github.io/wdlearn/</a></i></p>
+  </body>
+ </html>

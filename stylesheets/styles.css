@@ -14,6 +14,8 @@ h1, h2, h3, h4, h5, h6 {
 
 p, ul, ol, table, pre, dl {
   margin:0 0 20px;
+  padding-top: 5px;
+  padding-bottom: 5px;
 }
 
 h1, h2, h3 {
@@ -58,9 +60,14 @@ blockquote {
 }
 
 code, pre {
-  font-family:Monaco, Bitstream Vera Sans Mono, Lucida Console, Terminal;
+  font-family:Courier New, Lucida Console, Terminal, Monaco, Bitstream Vera Sans Mono;
   color:#333;
+  background-color:#eee;
+  display: block;
+  width:auto;
   font-size:12px;
+  padding-top: 5px;
+  padding-bottom: 5px;
 }
 
 pre {
@@ -177,8 +184,8 @@ hr {
 }
 
 footer {
-  width:270px;
-  float:left;
+  width:370px;
+  float:right;
   position:fixed;
   bottom:50px;
 }
