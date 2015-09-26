@@ -35,7 +35,7 @@ https://wd-url/ccx/service/customreport2/tenant/owner/Report_Name?Worker!WID=418
 	Fortunately, Workday RaaS also publishes reports as SOAP web services, in which request parameters can be sent in the message body. Message length is less of a concern (I know of one integration that sends a few thousand workers in a single report call) and it's easy to construct the request in an XSL or write step rather than a chain of eval statements.</p>
 	<h3>How it's done</h3>
 	<p>Start by creating a report and publishing it as a web service, as you would with an EIB or REST-based RaaS report. Off the reports related action, export and save the WSDL locally.<br/>
-	<img src="img/wsdl_link.png"/><br/>
+	<img src="./img/wsdl_link.png"/><br/>
 	Open your studio project, and from the context menu on the project root folder, select 'Import->Import...' select  on the following prompt, select 'File System' and click 'Next'.<br/>
 	<img src="img/import_1.png"/><br/>
 	Navigate to wherever you saved the WSDL earlier and select the file. Select your project root folder (or a subfolder if you wish) as the destination, and click 'Finish' to bring the WSDL into your project.<br/> On the Schema Explorer to the right, click the leftmost 'Add WSDL or XSD' button, navigate to your newly imported WSDL, and click 'OK'.<br/>
