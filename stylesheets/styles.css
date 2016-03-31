@@ -58,7 +58,7 @@ blockquote {
   padding:0 0 0 20px;
   font-style:italic;
 }
-
+/*
 code, pre {
   font-family:Courier New, Lucida Console, Terminal, Monaco, Bitstream Vera Sans Mono;
   color:#333;
@@ -76,8 +76,34 @@ pre {
   border-radius:5px;
   border:1px solid #e5e5e5;
   overflow-x: auto;
-}
+} 
+*/
 
+pre {
+        font-family: "Courier 10 Pitch", Courier, monospace;
+        font-size: 95%;
+        line-height: 140%;
+        white-space: pre;
+        white-space: pre-wrap;
+
+    }       
+    
+    code {
+        font-family: Monaco, Consolas, "Andale Mono", "DejaVu Sans Mono", monospace;
+        font-size: 95%;
+        line-height: 140%;
+        white-space: pre;
+        white-space: pre-wrap;
+
+        background: #faf8f0;
+    }
+    
+    #content code {
+        display: block;
+        padding: 0.5em 1em;
+        border: 1px solid #bebab0;
+    }
+    
 table {
   width:100%;
   border-collapse:collapse;

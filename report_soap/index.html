@@ -13,6 +13,7 @@
     <![endif]-->
   </head>
     <body>
+    <h2>Workday Reports as SOAP Services in WD Studio</h2><br/>
     <h3>Why use SOAP for RaaS?</h3>
     <p>You may find yourself looping through a data set (such as an input file) amd performing some kind of input logic that requires data from a Workday custom report which accepts a particular object instance as a parameter. Generally, RaaS calls are expensive operations, and running a report for each individual worker/cost center/period/whatever can quickly become a pain point as your input set grows.
     You're nearly always better off running a report once while passing every instance you'll need in a single call, and retrieving all the relevant data up front (if memory permits.) In the past year alone:
@@ -20,19 +21,20 @@
        <li>One client saw run times on an inbound earnings integration decrease from over an hour to around 7 minutes by converting an existing looped single instance REST report call to a single multi-instance SOAP call.</li>
 	   <li>We saw another client's check print integration go from exceeding the two hour timeout to completing in under 30 minutes after converting to a single SOAP report call.</li>
 	</ul>
-	I should mention that it is technically possible to pass multiple instances inside a URL if you wanted to stick with the REST approach. For example, a multi instance worker report could be called with as below:<br/>
+	I should mention that it is technically possible to pass multiple instances inside a URL if you wanted to stick with the REST approach. For example, a multi instance worker report could be called with something like the MVEL below (assuming you've added a multi-instance reference-type launch parameter and a report service with a reference to a report that takes multiple workers as input to your Workday-In):<br/>
 	<code>
-https://wd-url/ccx/service/customreport2/tenant/owner/Report_Name?Worker!WID=418b91b6b064104b21a9ee0d6c2498ab!6854645811284e8182713524d52a30ce
-	</code>
-	and with a list of Worker WIDs you could construct a URL in an eval step with something like this:
+    https://wd-url/ccx/service/customreport2/tenant/owner/Report_Name?Worker!WID=418b91b6b064104b21a9ee0d6c2498ab!6854645811284e8182713524d52a30ce
+	</code><br/>
+	and with a list of Worker WIDs you could construct a URL in an eval step with something like this:<br/>
 	<code>
-	   props['Worker_WIDs'] = lp.getReferenceDataList('Workers', 'WID')<br/>
-	   props['report_url'] = intsys.reportService.getExtrapath('WorkerReport') + '?Worker!WID='<br/>
-	   props['count'] = props['Worker_WIDs'].size() - 1<br/>
-	   foreach(i: count) { props['report_url'] = props['report_url'] + '!' + props['Worker_WIDs'].get(i) }<br/>
-	</code>
-	but it's likely that you're going to run into URL length limitations. Most browsers limit URLS to around 2083 characters and while I haven't found anything published, I imagine Workday Studio's limit is around there as well; With 32 characters for each WID you're most likely going to hit that limit pretty quickly.
+    props['Worker_WIDs'] = lp.getReferenceDataList('Workers', 'WID')
+    props['report_url'] = intsys.reportService.getExtrapath('WorkerReport') + '?Worker!WID='
+    props['count'] = props['Worker_WIDs'].size() - 1
+    foreach(i: count) { props['report_url'] = props['report_url'] + '!' + props['Worker_WIDs'].get(i) }
+	</code><br/>
+	but it's likely that you're going to run into URL length limitations. Most browsers limit URLS to around 2083 characters and while I haven't found anything published, I imagine Workday Studio's limit is around there as well; With 32 characters for each WID you're most likely going to hit that limit pretty quickly. (Not to mention that appending strings inside a loop like that can eat memory suprisingly quickly - if you must do this, you're probably better off using java.util.StringBuilder's append() method)
 	Fortunately, Workday RaaS also publishes reports as SOAP web services, in which request parameters can be sent in the message body. Message length is less of a concern (I know of one integration that sends a few thousand workers in a single report call) and it's easy to construct the request in an XSL or write step rather than a chain of eval statements.</p>
+    <p>You'll first want to ask yourself if there's an easier way before going down this road, such as building your report filter around some other, more manageable (i.e. singular, or static) parameter. You've probably already considered this, but it's worth taking a few minutes to think over. If you still want or need to go this route, please read on.</p>
 	<h3>How it's done</h3>
 	<p>Start by creating a report and publishing it as a web service, as you would with an EIB or REST-based RaaS report. Off the reports related action, export and save the WSDL locally.<br/>
 	<img src="./img/wsdl_link.PNG"/><br/>
@@ -56,15 +58,15 @@ https://wd-url/ccx/service/customreport2/tenant/owner/Report_Name?Worker!WID=418
 	At this point, you'll have a large block of XML which you can store in a variable, and extract individual elements as needed with xpath. However, xpath lookups are themselves kind of expensive (though much less so than a new report call each time.) For large datasets, it's probably worth it to convert your giant XML result set into a hashtable, as hash lookups are relatively quick.<br/>
 	The process for this will look something like the sequence below:<br/>
 	<img src="img/split-sequence.PNG"><br/>
-	In your first Eval step, prepare a hashmap to store the report results, as below:
+	In your first Eval step, prepare a hashmap to store the report results, as below:<br/>
 	<code>
-	props['report.hash.map'] = new java.util.HashMap()
-	</code>
-	Split your report output into individual records, and read each key and value into the table you created with something similar to the following:
+    props['report.hash.map'] = new java.util.HashMap()
+	</code><br/>
+    Split your report output into individual records, and read each key and value into the table you created with something similar to the following:<br/>
 	<code>
-	props['report.hash.key.value'] = parts[0].xpath('/rp:Report_Entry/rp:Employee/rp:Employee_ID')<br/>
-	props['report.hash.map'].put(props['report.hash.key.value'], parts[0].text)<br/>
-	</code>
+    props['report.hash.key.value'] = parts[0].xpath('/rp:Report_Entry/rp:Employee/rp:Employee_ID')
+    props['report.hash.map'].put(props['report.hash.key.value'], parts[0].text)
+	</code><br/>
 	You should now be able to access the report data you need with a simple map lookup, which will run somewhat faster than an xpath statement, which itself will run an order of magnitude faster than a report call.<br/>
 	
 	That's about all there is to it. A sample studio file is available <a href="WD_Soap_Demo.zip">here</a>.<br/>
