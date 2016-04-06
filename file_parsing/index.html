@@ -64,7 +64,7 @@ re.match('^ABC', input_line)</pre></div>
 	
 	<h3>Tying it together</h3>
 	<p>Let's take a look at a practical example. I'm sure some of you will recognize this type of file right away, and groan:<br/><br/>
-	<img src='img/anon_sample.PNG'/><br/><br/>
+	<img src='img/anon_sample.png'/><br/><br/>
 	For the uninitiated, this is what an ADP PSS file looks like - A file-level header, followed by up to around 30 per-worker lines, and one or two file trailer records. (Yes, it's completely anonymized.) While the lines themselves are fixed-width, but the number of lines for each payment can vary based on a number of factors (your tenants payroll setup, the number of lines on the paystub, etc.) The best strategy here is to look for the specific lines contining the data you're interested in based on the line record ID in the first six characters of the line, and then read the data at specific positions in the line based on the ADP provided file specification.</p>
 	
 	For example, if you wanted to read a workers legal name as it appears on the check, You'd look for the P00025 record and read characters 7 through 46, and if you wanted the check date, you'd look for positions 19 through 26 on the P00020 record.
