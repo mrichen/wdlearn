@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>File Parsing & Data Validation with Python</title>
+
+    <link rel="stylesheet" href="../stylesheets/styles.css">
+    <link rel="stylesheet" href="../stylesheets/github-light.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+    <body>
+    <h2>File Parsing & Data Validation with Python</h2><br/>
+    <h3>Why</h3>
+    <p>Testing is, to be honest, the typical developers least favorite phase in the development cycle, and data validation is probably the worst part of it. Even simple outbound integrations can require a great deal of tedious, time consuming file auditing.
+
+	Suppose you need to extract a value from a certain position in a fixed width file, or from a certain column in a delimited file, and compare it to report data. For a one-off validation, you can do this with excel's text import tool, but in most cases you'll have to repeat the import process with each new file. (Apparently there's a way to save and reuse an excel import template outlined here https://blogs.office.com/2010/06/10/importing-text-files-in-an-excel-sheet/
+	but the process appears to be kind of cumbersome.)
+ 
+	Fortunately, Python has a few pre-built libraries and tools that make text file parsing relatively easy. If you're willing to open a text editor and do a bit of scripting, you can create a reusable tool for reading and validating file data. Save it alongside your XSLT, studio code, and/or report definition and your colleagues will have a pre-built testing framework that should cut a substantial amount of time and effort from the test phases of future integration projects. This is also a great way to spur Python uptake in your organization. Just sayin'.</p>
+
+	<h3>Lets get started</h3>
+	<p>To follow along here, you'll really just need the python binaries, downloaded here: https://www.python.org/downloads .  Oh, and your favorite text editor.</p>
+ 
+	<p>Once the install is complete, you may want to add the 'python' executable to your path environment variable (Start->Computer->Properties->Advanced System Settings->Advanced Tab-Environment Variables) for convenience. Once that's done, all you'll need to do to execute a program is save your code file (a .py extension is customary) and type 'python [filename]' into a command prompt in your working directory.
+	
+	Lets look at the first few lines of a typical script:
+<div class="code"><pre>
+import sys
+import re
+import struct
+
+for line in open(sys.argv[1], 'r'):
+</pre></div>
+	Let's start from the bottom: We'll access our input file with the open() function, which takes two arguments, a file name and a letter indicating a 'mode' (e.g. read only, read write, etc.) Read only ('r') is sufficient for my purposes. As for the file name, I could hardcode a path, but I'd like to be able to specify the file to read at run time, so I'm going to make use of a built in list of variables in the supplied 'sys' package called 'argv' (short for 'argument vector') that refer to the arguments passed to the python executable. 
+
+	To import the sys package we just include this line at the top of our script:
+	<div class="code"><pre>import sys</pre></div> and any functions and variables in that package are now available to us (We've done this with a couple other packages, and I'll explain what we're doing with them below.) As I mentioned, we're going to take the argument list and read the second value into the file name (the first is the name of the script.) In addition, the open() function returns a 'file handle' object which can be used to keep track of our position in the file as we read. A particulary cool feature is that we can treat this file handle object as a list, and loop through each line of the file as follows:
+	<div class="code"><pre>for line in open(sys.argv[1], 'r'):</pre></div>
+	The simplest way to consume a comma separated line is to use the split() method, which will divide a string into a list of values given a separator and optionally a maximum number of values (fields beyond the max will be pushed into the last one.) A line like:
+	<div class="code"><pre>fields = line.split(',')</pre></div>
+	would read a line like 'Jane,Smith,15' into a list containing ('Jane', 'Smith', 15). If you need a richer feature set, the csv module offers support for quote escaping, reading into Dictionary objects, and the like.</p>
+	<h3>More tools</h3>
+	For fixed width files, the struct module is great for reading a set number of characters into one or more variables based on the position in the line. Originally designed for reading byte-by-byte binary data, it's featureset makes it easy to read a read fixed numbers of characters at fixed positions into variables as strings, integers, etc. the general gist is that you'd specify a format string for a line, for example: <span style="font-family: 'Courier New'">'40x10s'</span> would tell the struct module to skip over the first 40 characters, and read in the next 10 as a string. Pass this format to a newly created Struct object and create an intermediate compiled result object, and any string you pass into the 'result' method will be transformed into a list of data elements, as follows:
+	<div class="code">
+	<pre>
+import struct
+
+input_line = '                    FIRSTSTR**   SECONDSTR*'
+line_format = '20x10s3x10s' # skip the first 20 chars, read the next 10 into a string, skip 3 more, read the last 10 into another string
+fieldstruct = struct.Struct(line_format)
+result = fieldstruct.unpack_from
+[first_string, second_string] = result(input_line)
+</pre></div>
+	
+	At this point you may already be familiar with regular expressions in XSLT, Xpath, or any number of other languages, and if you're looking to capture a line or portion of a line conditionally based on the presence of a particular piece of text, python offers regex support on par with what you'd find anywhere else. The usage is pretty straightforward as well - import the 're' module along with your other imports, and use the 'match' or 'search' methods to return a true value if an input string matches the regular expression you've provided, or 'findall' to return a specific list of phrases from your string that match your regex. As a simple example:
+	<div class="code"><pre>import re
+	
+re.match('^ABC', input_line)</pre></div>
+	will return true if the input_line variable begins with the string "ABC". Functions for string replacement and splitting are also available - check the documentation for more info.</p>
+	
+	<h3>Tying it together</h3>
+	<p>Let's take a look at a practical example. I'm sure some of you will recognize this type of file right away, and groan:<br/><br/>
+	<img src='img/anon_sample.PNG'/><br/><br/>
+	For the uninitiated, this is what an ADP PSS file looks like - A file-level header, followed by up to around 30 per-worker lines, and one or two file trailer records. (Yes, it's completely anonymized.) While the lines themselves are fixed-width, but the number of lines for each payment can vary based on a number of factors (your tenants payroll setup, the number of lines on the paystub, etc.) The best strategy here is to look for the specific lines contining the data you're interested in based on the line record ID in the first six characters of the line, and then read the data at specific positions in the line based on the ADP provided file specification.</p>
+	
+	For example, if you wanted to read a workers legal name as it appears on the check, You'd look for the P00025 record and read characters 7 through 46, and if you wanted the check date, you'd look for positions 19 through 26 on the P00020 record.
+
+	Suppose you wanted to extract a list of payee names given a PSS file for audit purposes - you'd use a code block something like this:<br/>
+<div class="code"><pre>for line in open(sys.argv[1], 'r'):
+if re.match('^P00025', line):
+	fmt = '6x40s' # skip 6 characters, read the next 40
+	fieldstruct = struct.Struct(fmt)
+	result = fieldstruct.unpack_from
+	fields = result(line)
+	worker_name = fields[1]
+</pre></div>
+	and you could sum payment amounts (P01000, pos. 109-122) to generate a control total to compare to your settlement total in Workday or in the trailer record.
+
+	<p>There's a larger demo script available <a href="audit2.py">here</a>. Seriously, unit testing is painful and time consuming and with an approach like this you can 1.) save yourself a ton of repeated work from one project to another and 2.) move towards standardized unit tests, reducing the likelihood of missing errors that will burn you later.</p>
+	
+	Hope this helps.</p><br/>
+	<p align="right"><i>2015 @matthewrichen <a href="http://mrichen.github.io/wdlearn/">mrichen.github.io/wdlearn/</a></i></p>
+  </body>
+ </html>

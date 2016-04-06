@@ -22,16 +22,14 @@
 	   <li>We saw another client's check print integration go from exceeding the two hour timeout to completing in under 30 minutes after converting to a single SOAP report call.</li>
 	</ul>
 	I should mention that it is technically possible to pass multiple instances inside a URL if you wanted to stick with the REST approach. For example, a multi instance worker report could be called with something like the MVEL below (assuming you've added a multi-instance reference-type launch parameter and a report service with a reference to a report that takes multiple workers as input to your Workday-In):<br/>
-	<code>
-    https://wd-url/ccx/service/customreport2/tenant/owner/Report_Name?Worker!WID=418b91b6b064104b21a9ee0d6c2498ab!6854645811284e8182713524d52a30ce
-	</code><br/>
+	<div class="code"><pre>
+https://wd-url/ccx/service/customreport2/tenant/owner/Report_Name?Worker!WID=418b91b6b064104b21a9ee0d6c2498ab!6854645811284e8182713524d52a30ce</pre></div>
 	and with a list of Worker WIDs you could construct a URL in an eval step with something like this:<br/>
-	<code>
-    props['Worker_WIDs'] = lp.getReferenceDataList('Workers', 'WID')
-    props['report_url'] = intsys.reportService.getExtrapath('WorkerReport') + '?Worker!WID='
-    props['count'] = props['Worker_WIDs'].size() - 1
-    foreach(i: count) { props['report_url'] = props['report_url'] + '!' + props['Worker_WIDs'].get(i) }
-	</code><br/>
+	<div class="code"><pre>
+props['Worker_WIDs'] = lp.getReferenceDataList('Workers', 'WID')
+props['report_url'] = intsys.reportService.getExtrapath('WorkerReport') + '?Worker!WID='
+props['count'] = props['Worker_WIDs'].size() - 1
+foreach(i: count) { props['report_url'] = props['report_url'] + '!' + props['Worker_WIDs'].get(i) }</pre></div>
 	but it's likely that you're going to run into URL length limitations. Most browsers limit URLS to around 2083 characters and while I haven't found anything published, I imagine Workday Studio's limit is around there as well; With 32 characters for each WID you're most likely going to hit that limit pretty quickly. (Not to mention that appending strings inside a loop like that can eat memory suprisingly quickly - if you must do this, you're probably better off using java.util.StringBuilder's append() method)
 	Fortunately, Workday RaaS also publishes reports as SOAP web services, in which request parameters can be sent in the message body. Message length is less of a concern (I know of one integration that sends a few thousand workers in a single report call) and it's easy to construct the request in an XSL or write step rather than a chain of eval statements.</p>
     <p>You'll first want to ask yourself if there's an easier way before going down this road, such as building your report filter around some other, more manageable (i.e. singular, or static) parameter. You've probably already considered this, but it's worth taking a few minutes to think over. If you still want or need to go this route, please read on.</p>
@@ -49,24 +47,19 @@
 	<img src="img/http-props.PNG"/><br/>
 	Add a WSSE Header to your request, using the <b>$wss.usernametoken.username</b> and <b>$wss.usernametoken.password</b> variables, so that your report is called with the credentials under which the studio is run. Make sure your integration user has the security needed for the report.<br/>
 	<img src="img/wsse-header.PNG"><br/>
-	In your response chain, a validate step with an expression similar to the following can be used to trap SOAP Faults:
-	<code>
-	parts[0].xpath('SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault', 'SOAP-ENV http://schemas.xmlsoap.org/soap/envelope/') == ''
-	</code>
-	Similarly, a copy step with an input of 'soapbody' and an output of 'message' can be used to strip the SOAP envelope if you're particular about that sort of thing.<br/>
+	In your response chain, a validate step with an expression similar to the following can be used to trap SOAP faults:
+	<div class="code"><pre>
+parts[0].xpath('SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault', 'SOAP-ENV http://schemas.xmlsoap.org/soap/envelope/') == ''</pre></div>
+	Of course, you could add a namespace alias for SOAP-ENV if you're going to be doing anything more with the envelope data. Similarly, a copy step with an input of 'soapbody' and an output of 'message' can be used to strip the SOAP envelope if you're particular about that sort of thing.</p>
 	<h3>Structuring data for performance</h3>
 	At this point, you'll have a large block of XML which you can store in a variable, and extract individual elements as needed with xpath. However, xpath lookups are themselves kind of expensive (though much less so than a new report call each time.) For large datasets, it's probably worth it to convert your giant XML result set into a hashtable, as hash lookups are relatively quick.<br/>
 	The process for this will look something like the sequence below:<br/>
 	<img src="img/split-sequence.PNG"><br/>
 	In your first Eval step, prepare a hashmap to store the report results, as below:<br/>
-	<code>
-    props['report.hash.map'] = new java.util.HashMap()
-	</code><br/>
-    Split your report output into individual records, and read each key and value into the table you created with something similar to the following:<br/>
-	<code>
-    props['report.hash.key.value'] = parts[0].xpath('/rp:Report_Entry/rp:Employee/rp:Employee_ID')
-    props['report.hash.map'].put(props['report.hash.key.value'], parts[0].text)
-	</code><br/>
+	<div class="code"><pre>props['report.hash.map'] = new java.util.HashMap()</pre></div>
+    Split your report output into individual records, and read each key and value into the table you created with something similar to the foll<div class="code"><pre>
+props['report.hash.key.value'] = parts[0].xpath('/rp:Report_Entry/rp:Employee/rp:Employee_ID')
+props['report.hash.map'].put(props['report.hash.key.value'], parts[0].text)</pre></div>
 	You should now be able to access the report data you need with a simple map lookup, which will run somewhat faster than an xpath statement, which itself will run an order of magnitude faster than a report call.<br/>
 	
 	That's about all there is to it. A sample studio file is available <a href="WD_Soap_Demo.zip">here</a>.<br/>
