@@ -50,7 +50,7 @@
 		<li>An http-out call to <span style="font-family: 'Courier New'">https://impl-cci.workday.com/ccx/wd-queue/WD_MQ_Demo/messages/@{props['message_id']}</span> to retrieve the current message. Use DELETE if you'd like to remove the message after retrieval, or GET to leave it in place.</li>		
 	</ol>
 	<p>Maybe this goes without saying, but it's probably a good idea to store your base queue URL as an integration attribute and set the prod and non-prod URLS up in your tenant with environment restrictions, so that messages don't become comingled as you migrate to production, or as sandbox refreshes.<br/>
-	Also keep in mind that there's nothing like the Correlation ID that JMS has, or the custom attributes that you can create with Amazon SQS. My original plan for this tutorial was to show how to implement a parallel or serial convoy, but I'm still struggling to find an elegant way to do that.<br/>
+	Also keep in mind that there's nothing like the Correlation ID that JMS has, or the custom message attributes that you can create with Amazon SQS, or Biztalk's promoted properties. My original plan for this tutorial was to show how to implement a parallel or serial convoy, but I'm still struggling to find an elegant way to do that.<br/>
 	Sample project is <a href="https://github.com/mrichen/WD_MesssageQueue_Demo">here</a>. Hope this helps.</p>
 	
 	<p align="right"><i>2016 @matthewrichen <a href="http://mrichen.github.io/wdlearn/">mrichen.github.io/wdlearn/</a></i></p>
