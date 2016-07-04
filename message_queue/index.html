@@ -41,7 +41,7 @@
 	</p>
 	
 	<p>There isn't much to discuss on the enqueue side, at least from Studio - use the enqueue-message mediation step, and specify the queue name. However, there's no equivalent dequeue-message step; To drain the queue, you'll need to do something like this:
-	<img src="img/dequeue-chain.png"/>
+	<img src="img/dequeue-chain.PNG"/>
 	<ol>
 		<li>Use a set-headers step in a mediation to add the X-Tenant message header. you can use the builtin cc.customer.id property to access the current tenant name.</li>
 		<li> A GET call to the 'fresh' operation on the message queue URL, with a maxMessages parameter big enough to acccomodate the largest realistic volume you might see (e.g. <span style="font-family: 'Courier New'">https://impl-cci.workday.com/ccx/wd-queue/WD_MQ_Demo/fresh?maxMessages=64000);</span> This will retrieve a list of messages currently queued.</li>
