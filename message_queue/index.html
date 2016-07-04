@@ -26,7 +26,7 @@
 	
 	The recently introduced Message Queue facility provides a way to keep Workday as a pure consumer in your infrastructure while still allowing you to control the frequency with which your application runs. Workday doesn't have to poll or check any external system or share, but integrations can still run in batch mode on a schedule the Workday administrator dictates. Inbound data is stored in a queue and can be processed all at once when it's convenient (or if you like, outbound data can be queued and retrieved by an external system via a REST call.) Additionally, message queues are useful for reprocessing errors from a previous run when there's no natural place in Workday to store the error data.</p>
 
-	<h3>How it Works</h3>
+	<h3>What to do</h3>
 	<p>The Community documentation and Studio sample are pretty good, and worth reading. I'm just here to provide a 20 minute summary and cover a few things that aren't explained so well.</p>
 	
 	<p>The Workday message queue service is exposed to Studio and external systems via REST calls; retrieve queued messages with GET or DELETE (depending on whether you want to leave the messages in the queue after retrieval or not), PUT a queue URL (the base URL on your tenant's datacenter Community page + /ccx/wd-queue/[queue_name]) to create a new queue, POST to a queue to add a new message. Use an 'X-Tenant' custom header to specify your tenant and Basic HTTP Auth to authenticate.</p>
